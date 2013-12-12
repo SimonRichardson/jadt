@@ -1,5 +1,7 @@
 package jadt;
 
+import jadt.options.Option;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -23,14 +25,11 @@ public class OptionTest {
 
 	@Test
 	public void semigroup() {
-		Option<Semigroup<Integer>> a = Option
-				.of((Semigroup<Integer>) new Num(1));
-		Option<Semigroup<Integer>> b = Option
-				.of((Semigroup<Integer>) new Num(1));
-		Assert.assertEquals(
-				"Option.of with semigroup concat should be correct value",
-				Option.semigroup(a).concat(Option.semigroup(b)).extract(),
-				Option.of(new Num(2)));
+		Option<Num> a = Option.of(new Num(1));
+		Option<Num> b = Option.of(new Num(2));
+		Assert.assertEquals("Option.of with map should be correct value",
+				a.semigroup().concat(b.semigroup()).to(),
+				Option.of(new Num(3)));
 	}
 }
 
@@ -38,17 +37,12 @@ class Num extends Semigroup<Integer> {
 
 	private Integer x;
 
-	public Num(Integer x) {
+	public Num(final Integer x) {
 		this.x = x;
 	}
 
 	@Override
-	public Integer extract() {
-		return this.x;
-	}
-
-	@Override
-	public Semigroup<Integer> concat(Semigroup<Integer> x) {
+	public Semigroup<Integer> concat(final Semigroup<Integer> x) {
 		return new Num(this.x + ((Num) x).x);
 	}
 
@@ -58,7 +52,7 @@ class Num extends Semigroup<Integer> {
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (this == obj)
 			return true;
 		else if (obj == null)
@@ -74,5 +68,10 @@ class Num extends Semigroup<Integer> {
 			else
 				return true;
 		}
+	}
+
+	@Override
+	public <B> B to() {
+		return null;
 	}
 }

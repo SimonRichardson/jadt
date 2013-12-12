@@ -1,4 +1,4 @@
-package jadt;
+package jadt.options;
 
 import jadt.Function0;
 import jadt.Function1;
@@ -9,54 +9,23 @@ public abstract class Option<T> {
 	private Option() {
 	}
 
-	public static <T> Option<T> of(final T x) {
+	public static final <T> Option<T> of(final T x) {
 		return new Some<T>(x);
 	}
 
-	public static <T> Option<T> empty() {
+	public static final <T> Option<T> empty() {
 		return new None<T>();
 	}
 
-	public static <T> Semigroup<Option<Semigroup<T>>> semigroup(final Option<Semigroup<T>> x) {
-		return new Semigroup<Option<Semigroup<T>>>() {
-			@Override
-			public Option<Semigroup<T>> extract() {
-				return x;
-			}
-			
-			@Override
-			public Semigroup<Option<Semigroup<T>>> concat(
-					final Semigroup<Option<Semigroup<T>>> y) {
-				final Option<Semigroup<T>> result = x.chain(new Function1<Semigroup<T>, Option<Semigroup<T>>>() {
-					@Override
-					public Option<Semigroup<T>> apply(final Semigroup<T> a) {
-						return y.extract().map(new Function1<Semigroup<T>, Semigroup<T>>() {
-							@Override
-							public Semigroup<T> apply(Semigroup<T> b) {
-								return a.concat(b);
-							}
-						});
-					}					
-				});
-				
-				return new Semigroup<Option<Semigroup<T>>>() {
-					@Override
-					public Option<Semigroup<T>> extract() {
-						return result;
-					}
-
-					@Override
-					public Semigroup<Option<Semigroup<T>>> concat(
-							Semigroup<Option<Semigroup<T>>> x) {
-						return semigroup(extract()).concat(x);
-					}
-				};
-			}
-		};
+	public static final <T extends Semigroup<T>> OptionSemigroup<T> semigroup(
+			final Option<T> x) {
+		return OptionSemigroup.from(x);
 	}
 
 	public abstract <B> B fold(Function1<T, B> f, Function0<B> g);
 
+	public abstract T get() throws Exception;
+	
 	public Option<T> orElse(final Option<T> x) {
 		return fold(new Function1<T, Option<T>>() {
 			public Option<T> apply(T x) {
@@ -108,6 +77,24 @@ public abstract class Option<T> {
 			}
 		});
 	}
+	
+	public <A extends Semigroup<?>> OptionSemigroup<A> semigroup() {
+        return fold(new Function1<T, OptionSemigroup<A>>() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public OptionSemigroup<A> apply(final T a) {
+                if (a instanceof Semigroup) {
+                    return OptionSemigroup.of((A) a);
+                } else 
+                    return OptionSemigroup.empty();
+            }
+        }, new Function0<OptionSemigroup<A>>() {
+            @Override
+            public OptionSemigroup<A> apply() {
+                return OptionSemigroup.empty();
+            }
+        });
+    }
 
 	private static final class Some<T> extends Option<T> {
 
@@ -121,6 +108,11 @@ public abstract class Option<T> {
 		public <B> B fold(final Function1<T, B> f, final Function0<B> g) {
 			return f.apply(this.x);
 		}
+		
+		@Override
+		public T get() throws Exception {
+			return this.x;
+		}
 
 		@Override
 		public int hashCode() {
@@ -130,7 +122,7 @@ public abstract class Option<T> {
 		}
 
 		@Override
-		public boolean equals(Object obj) {
+		public boolean equals(final Object obj) {
 			if (this == obj)
 				return true;
 			else if (obj == null)
@@ -158,6 +150,11 @@ public abstract class Option<T> {
 		public <B> B fold(final Function1<T, B> f, final Function0<B> g) {
 			return g.apply();
 		}
+		
+		@Override
+		public T get() throws Exception {
+			throw new Exception();
+		}
 
 		@Override
 		public int hashCode() {
@@ -165,7 +162,7 @@ public abstract class Option<T> {
 		}
 
 		@Override
-		public boolean equals(Object obj) {
+		public boolean equals(final Object obj) {
 			if (this == obj)
 				return true;
 			else if (obj == null)
