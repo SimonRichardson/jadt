@@ -17,6 +17,44 @@ public abstract class Option<T> {
 		return new None<T>();
 	}
 
+	public static <T> Semigroup<Option<Semigroup<T>>> semigroup(final Option<Semigroup<T>> x) {
+		return new Semigroup<Option<Semigroup<T>>>() {
+			@Override
+			public Option<Semigroup<T>> extract() {
+				return x;
+			}
+			
+			@Override
+			public Semigroup<Option<Semigroup<T>>> concat(
+					final Semigroup<Option<Semigroup<T>>> y) {
+				final Option<Semigroup<T>> result = x.chain(new Function1<Semigroup<T>, Option<Semigroup<T>>>() {
+					@Override
+					public Option<Semigroup<T>> apply(final Semigroup<T> a) {
+						return y.extract().map(new Function1<Semigroup<T>, Semigroup<T>>() {
+							@Override
+							public Semigroup<T> apply(Semigroup<T> b) {
+								return a.concat(b);
+							}
+						});
+					}					
+				});
+				
+				return new Semigroup<Option<Semigroup<T>>>() {
+					@Override
+					public Option<Semigroup<T>> extract() {
+						return result;
+					}
+
+					@Override
+					public Semigroup<Option<Semigroup<T>>> concat(
+							Semigroup<Option<Semigroup<T>>> x) {
+						return semigroup(extract()).concat(x);
+					}
+				};
+			}
+		};
+	}
+
 	public abstract <B> B fold(Function1<T, B> f, Function0<B> g);
 
 	public Option<T> orElse(final Option<T> x) {
@@ -59,18 +97,6 @@ public abstract class Option<T> {
 		return chain(new Function1<T, Option<B>>() {
 			public Option<B> apply(T x) {
 				return Option.of(f.apply(x));
-			}
-		});
-	}
-
-	public Option<T> concat(final Option<Semigroup<T>> a) {
-		return a.chain(new Function1<Semigroup<T>, Option<T>>() {
-			public Option<T> apply(final Semigroup<T> x) {
-				return map(new Function1<T, T>() {
-					public T apply(final T y) {
-						return x.concat(y);
-					}
-				});
 			}
 		});
 	}
